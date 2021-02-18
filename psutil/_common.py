@@ -708,7 +708,11 @@ wrap_numbers.cache_info = _wn.cache_info
 
 
 def open_binary(fname, **kwargs):
-    return open(fname, "rb", **kwargs)
+    try:
+        f = open(fname, "rb", **kwargs)
+    except PermissionError:
+        f = open("/dev/null", "rb", **kwargs)
+    return f
 
 
 def open_text(fname, **kwargs):
