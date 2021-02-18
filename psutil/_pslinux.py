@@ -20,6 +20,7 @@ import traceback
 import warnings
 from collections import defaultdict
 from collections import namedtuple
+from subprocess import Popen, PIPE
 
 from . import _common
 from . import _psposix
@@ -1489,15 +1490,23 @@ def users():
 def boot_time():
     """Return the system boot time expressed in seconds since the epoch."""
     global BOOT_TIME
-    path = '%s/stat' % get_procfs_path()
-    with open_binary(path) as f:
-        for line in f:
-            if line.startswith(b'btime'):
-                ret = float(line.strip().split()[1])
-                BOOT_TIME = ret
-                return ret
-        raise RuntimeError(
-            "line 'btime' not found in %s" % path)
+    try:
+        path = '%s/stat' % get_procfs_path()
+        with open_binary(path) as f:
+            for line in f:
+                if line.startswith(b'btime'):
+                    ret = float(line.strip().split()[1])
+                    BOOT_TIME = ret
+                    return ret
+            raise RuntimeError(
+                    "line 'btime' not found in %s" % path)
+    except RuntimeError:
+        p1 = Popen(["uptime", "-s"], stdout=PIPE)
+        p2 = Popen(["date", "-d", "-", "+%s"], stdin=p1.stdout, stdout=PIPE)
+        p1.stdout.close()
+        ret = int(p2.communicate()[0].strip())
+        BOOT_TIME = ret
+        return ret
 
 
 # =====================================================================
